@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 
+#HERE ARE MY test:
+print('test this...')
+
 # Create a VideoCapture object
 cap = cv2.VideoCapture(1)
 
