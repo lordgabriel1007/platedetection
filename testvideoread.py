@@ -29,5 +29,7 @@ while(cap.isOpened()):
 # When everything done, release the video capture object
 cap.release()
 
+print('done')
+
 # Closes all the frames
 cv2.destroyAllWindows()
