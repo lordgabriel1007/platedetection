@@ -244,7 +244,7 @@ ap.add_argument(
 args = vars(ap.parse_args())
 
 layerNames = ["feature_fusion/Conv_7/Sigmoid", "feature_fusion/concat_3"]
-
+print (args['east'])
 # load the pre-trained EAST text detector
 print("[INFO] loading EAST text detector...")
 net = cv2.dnn.readNet(args["east"])
