@@ -269,7 +269,7 @@ else:
 # output = cv2.VideoWriter("cam_video.mp4", vid_cod, 20.0, (640, 480))
 
 
-frame_rate = 5
+frame_rate = 30
 prev = 0
 frame_no = 0
 while vid_capture.isOpened():

@@ -8,6 +8,7 @@ opencv-python = "*"
 pytesseract = "*"
 imutils = "*"
 scikit-image = "*"
+matplotlib = "*"
 
 [dev-packages]
 
