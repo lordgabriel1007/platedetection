@@ -9,8 +9,11 @@ pytesseract = "*"
 imutils = "*"
 scikit-image = "*"
 matplotlib = "*"
+pandas = "*"
+openpyxl = "*"
 
 [dev-packages]
+jupyter = "*"
 
 [requires]
 python_version = "3.9"

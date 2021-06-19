@@ -6,6 +6,7 @@ import pytesseract
 import numpy as np
 import argparse
 import time
+import datetime
 
 print("main program starting..")
 
@@ -73,7 +74,8 @@ def process(image):
     imgDial = cv2.dilate(imgCanny,kernel,iterations=2)
     imgThres = cv2.erode(imgDial,kernel,iterations=2)
     biggest, imgContour, warped = getContours(imgThres, image)  # Change
-    return imgContour, warped
+
+    return biggest, imgContour, warped
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -138,7 +140,7 @@ else:
 # output = cv2.VideoWriter("cam_video.mp4", vid_cod, 20.0, (640, 480))
 
 
-frame_rate = 10
+frame_rate = 30
 prev = 0
 frame_no = 0
 
@@ -152,34 +154,55 @@ while vid_capture.isOpened():
     if time_elapsed > 1.0 / frame_rate:
         prev = time.time()
 
-        contour, warped = process(image)
+        corners, contour, warped = process(image)
 
-        cv2.imshow("contour", contour)
+        #cv2.imshow("contour", contour)
+        # if warped image is not null
         if (type(warped) != type(None)):
-            cv2.imshow("warped", warped)
+            print(f'upperleft corner: {corners[0]}')
+            cv2.imshow("warped original", warped)
+
+            # convert the image to txt using pytesseract
             config = "-l eng --oem 1 --psm 7"
             text = pytesseract.image_to_string(warped, config=config)
+            text = str.strip(text) #remove leading and trailing spaces
             print(f'detected text:{text}, length:{len(text)}')
 
 
-
         print(f"frame #{frame_no}")
-        frame_no += 1
+
 
         #implement state machine here:
         if state==1: #no car plate visible
             #check string length
             if (len(text)>= 6):
-                state = 2 #first view of plate
-                frame_begin = frame_no
+                frame_begin = frame_no #save the frame number
+                corner_x = corners[0][0] #save the x coordinate of the upper left corner
                 print(f'plate found at frame#{frame_no}')
+                plate_no = text #save text as plate number
+                #df.append({'DateTime': datetime.now, 'Plate':plate_no, direction})
+                text = '' #reset text variable
+                state = 2 #move to state 2
+
         elif state==2: 
             if (len(text)>= 6):
                 frame_begin = frame_no
+                '''print(f'corners: {corners}')
+                if len(corners) > 0:
+                    delta_x = corners[0][0] - corner_x
+
+                if delta_x > 0:
+                    print('moving left to right')
+                else:
+                    print('moving right to left')'''
+
             frame_elapsed = frame_no - frame_begin
+            text = ''
             if frame_elapsed > 10:
                 state = 1
-            
+
+
+        frame_no += 1    
         print(f'state={state}')
 
     # output.write(frame)
