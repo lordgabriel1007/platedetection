@@ -117,8 +117,9 @@ def video_processor(vid_capture, df):
 
             #implement state machine here:
             if state==1: #no car plate visible
-                #check string length
-                if (len(text)>= 6):
+                x = re.search('^[A-Z]{3}[0-9]{3,4}$', text)
+                #check string is a plate number
+                if (x):
                     frame_begin = frame_no #save the frame number
                     corner_x = corners[0][0] #save the x coordinate of the upper left corner
                     print(f'plate found at frame#{frame_no}')
@@ -127,7 +128,8 @@ def video_processor(vid_capture, df):
                     state = 2 #move to state 2
 
             elif state==2: 
-                if (len(text)>= 6):
+                x = re.search('^[A-Z]{3}[0-9]{3,4}$', text)
+                if (x):
                     frame_begin = frame_no
                     print(f'corners: {corners}')
                     if len(corners) > 0:
