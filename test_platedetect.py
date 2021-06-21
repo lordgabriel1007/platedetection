@@ -1,12 +1,14 @@
 import cv2
-
-
-from imutils.object_detection import non_max_suppression
 import pytesseract
+import pandas as pd
 import numpy as np
 import argparse
 import time
-import datetime
+from datetime import datetime
+from datetime import date
+import os
+import glob
+import re
 
 print("main program starting..")
 
@@ -77,148 +79,151 @@ def process(image):
 
     return biggest, imgContour, warped
 
-# construct the argument parser and parse the arguments
+def video_processor(vid_capture, df):
+    frame_rate = 30
+
+    #initialize state variables
+    prev = 0
+    frame_no = 0
+    state = 1 #initial state, no car visible
+    text = ''
+    direction = ''
+
+    while vid_capture.isOpened():
+        time_elapsed = time.time() - prev
+        # Capture each frame of webcam video
+        ret, image = vid_capture.read()
+
+        if time_elapsed > 1.0 / frame_rate:
+            prev = time.time()
+
+            corners, contour, warped = process(image)
+
+            #cv2.imshow("contour", contour)
+
+            # if warped image is not null
+            if (type(warped) != type(None)):
+                print(f'upperleft corner: {corners[0]}')
+                cv2.imshow("warped original", warped)
+
+                # convert the image to txt using pytesseract
+                config = "-l eng --oem 1 --psm 7"
+                text = pytesseract.image_to_string(warped, config=config)
+                print(f'detected text:{text}, length:{len(text)}')
+                text = pattern.sub('', text) #keep alphanumeric characters only
+
+            print(f"frame #{frame_no}")
+
+
+            #implement state machine here:
+            if state==1: #no car plate visible
+                #check string length
+                if (len(text)>= 6):
+                    frame_begin = frame_no #save the frame number
+                    corner_x = corners[0][0] #save the x coordinate of the upper left corner
+                    print(f'plate found at frame#{frame_no}')
+                    plate_no = text #save text as plate number
+                    text = '' #reset text variable
+                    state = 2 #move to state 2
+
+            elif state==2: 
+                if (len(text)>= 6):
+                    frame_begin = frame_no
+                    print(f'corners: {corners}')
+                    if len(corners) > 0:
+                        delta_x = corners[0][0] - corner_x
+
+                    if delta_x > 0:
+                        direction = 'EXITING'
+                        print('moving left to right')
+                    else:
+                        direction = 'ENTERING'
+                        print('moving right to left')
+
+                    #check if car is resident or visitor
+                    if len(rdf[rdf.Plate == plate_no])==0:
+                        car_type = 'VISITOR'
+                    else:
+                        car_type = 'RESIDENT'
+
+                frame_elapsed = frame_no - frame_begin
+                text = ''
+                if frame_elapsed > 10:
+                    #append this car to the dataframe
+                    df = df.append({'DateTime':datetime.now(), 'Plate':plate_no, 'Direction':direction, 'Type': car_type,'Source': source}, ignore_index=True)
+                    #next state = 1
+                    state = 1
+
+
+            frame_no += 1    
+            print(f'state={state}')
+
+        # output.write(frame)
+        # Close and break the loop after pressing "ESC" key
+        if cv2.waitKey(1) == 27:
+            break
+
+        if source != "webcam":
+            if vid_capture.get(cv2.CAP_PROP_POS_FRAMES) == vid_capture.get(cv2.CAP_PROP_FRAME_COUNT) :
+                # If the number of captured frames is equal to the total number of frames,
+                # we stop
+                break
+
+    # close the already opened camera
+    vid_capture.release()
+    # close the already opened file
+    # output.release()
+    # close the window and de-allocate any associated memory usage
+    cv2.destroyAllWindows()
+    return df
+
+
+#PROGRAM START HERE
 ap = argparse.ArgumentParser()
-ap.add_argument("-i", "--image", type=str, help="path to input image")
-ap.add_argument("-east", "--east", type=str, help="path to input EAST text detector")
-ap.add_argument(
-    "-c",
-    "--min-confidence",
-    type=float,
-    default=0.5,
-    help="minimum probability required to inspect a region",
-)
-ap.add_argument(
-    "-w",
-    "--width",
-    type=int,
-    default=320,
-    help="nearest multiple of 32 for resized width",
-)
-ap.add_argument(
-    "-e",
-    "--height",
-    type=int,
-    default=320,
-    help="nearest multiple of 32 for resized height",
-)
-ap.add_argument(
-    "-p",
-    "--padding",
-    type=float,
-    default=0.0,
-    help="amount of padding to add to each border of ROI",
-)
 ap.add_argument(
     "-v",
-    "--videofile",
+    "--videofolder",
     type=str,
     default="",
-    help="video file to load",
+    help="video folder to load from",
 )
 args = vars(ap.parse_args())
 
+#Load residents' plate list
+rdf = pd.read_excel('residents.xlsx')
+
+#initialize data frame to store detected plates
+df = pd.DataFrame(columns=['DateTime', 'Plate', 'Direction', 'Type', 'Source',])
+#Regular expression for stripping out non-alphanumeric characters
+pattern = re.compile('[\W_]+')
 
 
-if args["videofile"] == "":
+if args["videofolder"] == "":
     # Capture video from webcam
-    vid_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    vid_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    vid_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    vid_cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    vid_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    vid_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    source = 'webcam'
+    video_processor(vid_cap)
 else:
-    # Create a VideoCapture object and read from input file
-    # If the input is the camera, pass 0 instead of the video file name
-    vid_capture = cv2.VideoCapture(args["videofile"])
+    all_files = glob.glob(os.path.join(f'{args["videofolder"]}/*.mp4'))
+    for filename in all_files:
+        print(filename)
 
-    # Check if camera opened successfully
-    if vid_capture.isOpened() == False:
-        print("Error opening video stream or file")
-        exit()
-
-
-# vid_cod = cv2.VideoWriter_fourcc(*"MJPG")
-# output = cv2.VideoWriter("cam_video.mp4", vid_cod, 20.0, (640, 480))
-
-
-frame_rate = 30
-prev = 0
-frame_no = 0
-
-state = 1 #no car
-text = ''
-while vid_capture.isOpened():
-    time_elapsed = time.time() - prev
-    # Capture each frame of webcam video
-    ret, image = vid_capture.read()
-
-    if time_elapsed > 1.0 / frame_rate:
-        prev = time.time()
-
-        corners, contour, warped = process(image)
-
-        #cv2.imshow("contour", contour)
-        # if warped image is not null
-        if (type(warped) != type(None)):
-            print(f'upperleft corner: {corners[0]}')
-            cv2.imshow("warped original", warped)
-
-            # convert the image to txt using pytesseract
-            config = "-l eng --oem 1 --psm 7"
-            text = pytesseract.image_to_string(warped, config=config)
-            text = str.strip(text) #remove leading and trailing spaces
-            print(f'detected text:{text}, length:{len(text)}')
+        # Create a VideoCapture object and read from input file
+        # If the input is the camera, pass 0 instead of the video file name
+        vid_cap = cv2.VideoCapture(filename)
+        source = os.path.basename(filename)
+        # Check if camera opened successfully
+        if vid_cap.isOpened() == False:
+            print(f'Error opening {filename}')
+            continue
+        
+        #process the opened video file
+        df = video_processor(vid_cap, df)
 
 
-        print(f"frame #{frame_no}")
 
+today = str.replace(f'data-{datetime.now()}',':', '_')
 
-        #implement state machine here:
-        if state==1: #no car plate visible
-            #check string length
-            if (len(text)>= 6):
-                frame_begin = frame_no #save the frame number
-                corner_x = corners[0][0] #save the x coordinate of the upper left corner
-                print(f'plate found at frame#{frame_no}')
-                plate_no = text #save text as plate number
-                #df.append({'DateTime': datetime.now, 'Plate':plate_no, direction})
-                text = '' #reset text variable
-                state = 2 #move to state 2
-
-        elif state==2: 
-            if (len(text)>= 6):
-                frame_begin = frame_no
-                '''print(f'corners: {corners}')
-                if len(corners) > 0:
-                    delta_x = corners[0][0] - corner_x
-
-                if delta_x > 0:
-                    print('moving left to right')
-                else:
-                    print('moving right to left')'''
-
-            frame_elapsed = frame_no - frame_begin
-            text = ''
-            if frame_elapsed > 10:
-                state = 1
-
-
-        frame_no += 1    
-        print(f'state={state}')
-
-    # output.write(frame)
-    # Close and break the loop after pressing "ESC" key
-    if cv2.waitKey(1) == 27:
-        break
-
-    if args["videofile"] != "":
-        if vid_capture.get(cv2.CAP_PROP_POS_FRAMES) == vid_capture.get(cv2.CAP_PROP_FRAME_COUNT) :
-            # If the number of captured frames is equal to the total number of frames,
-            # we stop
-            break
-
-# close the already opened camera
-vid_capture.release()
-# close the already opened file
-# output.release()
-# close the window and de-allocate any associated memory usage
-cv2.destroyAllWindows()
+df.to_excel(f'{today}.xlsx')

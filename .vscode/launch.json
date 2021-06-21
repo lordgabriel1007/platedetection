@@ -11,12 +11,8 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "--east",
-                "frozen_east_text_detection.pb",
-                "-p",
-                "0.1",
-                "--videofile",
-                "Car/cau9527-LR.mp4"
+                "--videofolder",
+                "Cars"
             ]
         }
     ]
