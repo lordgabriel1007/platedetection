@@ -79,7 +79,7 @@ def process(image):
 
     return biggest, imgContour, warped
 
-def video_processor(vid_capture, df):
+def video_processor(vid_capture, df, source):
     frame_rate = 30
 
     #initialize state variables
@@ -89,7 +89,7 @@ def video_processor(vid_capture, df):
     text = ''
     direction = ''
     car_type = ''
-
+    found = False
     while vid_capture.isOpened():
         time_elapsed = time.time() - prev
         # Capture each frame of webcam video
@@ -127,6 +127,7 @@ def video_processor(vid_capture, df):
                     corner_x = corners[0][0] #save the x coordinate of the upper left corner
                     plate_no = text #save text as plate number
                     print(f'plate=[{plate_no}] found at frame#{frame_no}')
+                    found = True
                     text = '' #reset text variable
                     state = 2 #move to state 2
                     #check if car is resident or visitor
@@ -184,6 +185,9 @@ def video_processor(vid_capture, df):
     if state == 2:
         df = df.append({'DateTime':datetime.now(), 'Plate':plate_no, 'Direction':direction, 'Type': car_type,'Source': source}, ignore_index=True)
 
+    if found == False:
+        df = df.append({'DateTime':datetime.now(), 'Plate':'', 'Direction':'', 'Type': '','Source': source}, ignore_index=True)
+    
     # close the already opened camera
     vid_capture.release()
     # close the already opened file
@@ -234,8 +238,9 @@ else:
             print(f'Error opening {filename}')
             continue
         
+        
         #process the opened video file
-        df = video_processor(vid_cap, df)
+        df = video_processor(vid_cap, df, source)
 
 
 

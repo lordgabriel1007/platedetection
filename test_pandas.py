@@ -10,6 +10,14 @@ df.head()
 # %%
 df = df.append({'DateTime':datetime.now(), 'Plate':'ABF7059', 'Direction':'ENTERING', 'Source':'camera'}, ignore_index=True)
 df.head()
+
+# %%
+df2 = pd.DataFrame(columns=['DateTime', 'Plate', 'Direction', 'Source'])
+df2 = df2.append({'DateTime':datetime.now(), 'Plate':'', 'Direction':'', 'Source':'mp4'},ignore_index=True)
+df2
+# %%
+df = pd.concat([df, df2])
+df
 # %%
 df.to_excel('data.xlsx')
 # %%
