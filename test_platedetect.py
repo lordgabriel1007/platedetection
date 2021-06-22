@@ -88,6 +88,7 @@ def video_processor(vid_capture, df):
     state = 1 #initial state, no car visible
     text = ''
     direction = ''
+    car_type = ''
 
     while vid_capture.isOpened():
         time_elapsed = time.time() - prev
@@ -100,10 +101,12 @@ def video_processor(vid_capture, df):
             corners, contour, warped = process(image)
 
             #cv2.imshow("contour", contour)
+            #cv2.imshow("canny", canny)
+            #cv2.imshow("canny", erosion)
 
             # if warped image is not null
             if (type(warped) != type(None)):
-                print(f'upperleft corner: {corners[0]}')
+                #print(f'upperleft corner: {corners[0]}')
                 cv2.imshow("warped original", warped)
 
                 # convert the image to txt using pytesseract
@@ -112,7 +115,7 @@ def video_processor(vid_capture, df):
                 print(f'detected text:{text}, length:{len(text)}')
                 text = pattern.sub('', text) #keep alphanumeric characters only
 
-            print(f"frame #{frame_no}")
+            #print(f"frame #{frame_no}")
 
 
             #implement state machine here:
@@ -122,16 +125,21 @@ def video_processor(vid_capture, df):
                 if (x):
                     frame_begin = frame_no #save the frame number
                     corner_x = corners[0][0] #save the x coordinate of the upper left corner
-                    print(f'plate found at frame#{frame_no}')
                     plate_no = text #save text as plate number
+                    print(f'plate=[{plate_no}] found at frame#{frame_no}')
                     text = '' #reset text variable
                     state = 2 #move to state 2
+                    #check if car is resident or visitor
+                    if len(rdf[rdf.Plate == plate_no])==0:
+                        car_type = 'VISITOR'
+                    else:
+                        car_type = 'RESIDENT'
 
             elif state==2: 
                 x = re.search('^[A-Z]{3}[0-9]{3,4}$', text)
                 if (x):
                     frame_begin = frame_no
-                    print(f'corners: {corners}')
+                    #print(f'corners: {corners}')
                     if len(corners) > 0:
                         delta_x = corners[0][0] - corner_x
 
@@ -142,23 +150,24 @@ def video_processor(vid_capture, df):
                         direction = 'ENTERING'
                         print('moving right to left')
 
-                    #check if car is resident or visitor
-                    if len(rdf[rdf.Plate == plate_no])==0:
-                        car_type = 'VISITOR'
-                    else:
-                        car_type = 'RESIDENT'
-
                 frame_elapsed = frame_no - frame_begin
-                text = ''
-                if frame_elapsed > 10:
+
+
+                if frame_elapsed > 40:
                     #append this car to the dataframe
                     df = df.append({'DateTime':datetime.now(), 'Plate':plate_no, 'Direction':direction, 'Type': car_type,'Source': source}, ignore_index=True)
                     #next state = 1
+                    direction = ''
+                    car_type = ''
+                    plate_no = ''
                     state = 1
+                    
+                text = ''
 
 
             frame_no += 1    
             print(f'state={state}')
+
 
         # output.write(frame)
         # Close and break the loop after pressing "ESC" key
@@ -170,6 +179,10 @@ def video_processor(vid_capture, df):
                 # If the number of captured frames is equal to the total number of frames,
                 # we stop
                 break
+
+    #if state machine ends at state 2, append the last recorded car
+    if state == 2:
+        df = df.append({'DateTime':datetime.now(), 'Plate':plate_no, 'Direction':direction, 'Type': car_type,'Source': source}, ignore_index=True)
 
     # close the already opened camera
     vid_capture.release()

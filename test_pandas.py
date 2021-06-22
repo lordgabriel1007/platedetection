@@ -35,3 +35,9 @@ for filename in all_files:
     #print(os.path.basename(filename))
 
 # %%
+import re
+#Regular expression for stripping out non-alphanumeric characters
+pattern = re.compile('[\W_]+')
+text = "ABF 7059 "
+print(pattern.sub('', text))
+# %%
