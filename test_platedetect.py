@@ -150,6 +150,9 @@ def video_processor(vid_capture, df, source):
                     else:
                         direction = 'ENTERING'
                         print('moving right to left')
+                        #use this current one as it is closer to the camera
+                        plate_no = text #save text as plate number
+
 
                 frame_elapsed = frame_no - frame_begin
 
