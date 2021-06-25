@@ -23,7 +23,7 @@ def getContours(img, orig):  # Change - pass the original image too
     index = None
     for i, cnt in enumerate(contours):  # Change - also provide index
         area = cv2.contourArea(cnt)
-        if (area > 1000.0) & (area < 5000.0):
+        if (area > 10000.0) & (area < 20000.0):
             peri = cv2.arcLength(cnt, True)
             approx = cv2.approxPolyDP(cnt,0.02*peri, True)
             if area > maxArea and len(approx) == 4:
@@ -70,15 +70,15 @@ imgThresh = cv2.adaptiveThreshold(imgBlur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
 cv2.imshow("thresh", imgThresh)
 cv2.waitKey(0)
 
-'''imgCanny = cv2.Canny(imgThresh,150,200)
+imgCanny = cv2.Canny(imgThresh,150,200)
 cv2.imshow("canny", imgCanny)
 cv2.waitKey(0)
-imgDial = cv2.dilate(imgCanny,kernel,iterations=2)
+'''imgDial = cv2.dilate(imgCanny,kernel,iterations=2)
 cv2.imshow("dilate", imgDial)
 cv2.waitKey(0)
 
-imgThres = cv2.erode(imgDial,kernel,iterations=2)
-cv2.imshow("dilate", imgThres)
+imgErode = cv2.erode(imgDial,kernel,iterations=2)
+cv2.imshow("erod", imgErode)
 cv2.waitKey(0)'''
 
 biggest, imgContour, warped = getContours(imgThresh, image)
