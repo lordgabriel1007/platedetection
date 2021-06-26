@@ -37,6 +37,9 @@ GPIO.setup(RED, GPIO.OUT)
 GPIO.setup(GREEN, GPIO.OUT)
 GPIO.setup(YELLOW, GPIO.OUT)
 
+GPIO.output(YELLOW, GPIO.LOW)
+GPIO.output(RED, GPIO.LOW)
+GPIO.output(GREEN, GPIO.LOW)
 
 #Init at 0°
 pwm.start(angle_to_percent(0))
@@ -57,9 +60,11 @@ def data_received(data):
     elif data=='r':
         GPIO.output(RED, GPIO.HIGH)
 
-    elif data=='g':
-        pwm.start(angle_to_percent(0))
+    elif data=='og':
+        pwm.start(angle_to_percent(150))
+        GPIO.output(YELLOW, GPIO.HIGH)
         GPIO.output(GREEN, GPIO.HIGH)
+
     elif data=='x':
         pwm.stop()
         GPIO.cleanup()
