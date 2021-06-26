@@ -1,0 +1,21 @@
+import RPi.GPIO as GPIO
+import time
+
+RED = 29
+GREEN = 36
+YELLOW = 38
+
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(RED, GPIO.OUT)
+GPIO.setup(GREEN, GPIO.OUT)
+GPIO.setup(YELLOW, GPIO.OUT)
+
+GPIO.output(RED, GPIO.HIGH)
+GPIO.output(GREEN, GPIO.HIGH)
+GPIO.output(YELLOW, GPIO.HIGH)
+time.sleep(3)
+GPIO.output(RED, GPIO.LOW)
+GPIO.output(GREEN, GPIO.LOW)
+GPIO.output(YELLOW, GPIO.LOW)
+
+GPIO.cleanup()

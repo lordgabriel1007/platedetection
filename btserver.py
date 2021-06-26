@@ -23,9 +23,9 @@ GPIO.setwarnings(False) #Disable warnings
 
 #Use pin 12 for PWM signal
 pwm_gpio = 12
-frequence = 50
+frequency = 50
 GPIO.setup(pwm_gpio, GPIO.OUT)
-pwm = GPIO.PWM(pwm_gpio, frequence)
+pwm = GPIO.PWM(pwm_gpio, frequency)
 
 #Init at 0°
 pwm.start(angle_to_percent(0))
