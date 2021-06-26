@@ -33,8 +33,8 @@ def gate_control(action):
             s.send(bytes("c", "UTF-8"))
         elif action == "RED":
             s.send(bytes("r", "UTF-8"))
-        elif action == "GREEN":
-            s.send(bytes("g", "UTF-8"))
+        elif action == "OPENGREEN":
+            s.send(bytes("og", "UTF-8"))
         elif action == "OFF":
             s.send(bytes("x", "UTF-8"))
             s.close()
@@ -171,8 +171,7 @@ def video_processor(vid_capture, df, source):
                     else:
                         car_type = "RESIDENT"
                         # OPEN THE GATE
-                        gate_control("OPEN")
-                        gate_control("GREEN")
+                        gate_control("OPENGREEN")
                         gate = "open"
 
             elif state == 2:
