@@ -31,9 +31,14 @@ def gate_control(action):
             s.send(bytes("o", "UTF-8"))
         elif action == "CLOSE":
             s.send(bytes("c", "UTF-8"))
+        elif action == "RED":
+            s.send(bytes("r", "UTF-8"))
+        elif action == "GREEN":
+            s.send(bytes("g", "UTF-8"))
         elif action == "OFF":
             s.send(bytes("x", "UTF-8"))
             s.close()
+            
 
 
 def order_points(pts):
@@ -99,9 +104,6 @@ def process(image):
     kernel = np.ones((3, 3))
     imgGray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 1)
-    imgThresh = cv2.adaptiveThreshold(
-        imgBlur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 21, 4
-    )
     imgCanny = cv2.Canny(imgBlur, 150, 200)
     imgDial = cv2.dilate(imgCanny, kernel, iterations=2)
     imgThres = cv2.erode(imgDial, kernel, iterations=2)
@@ -138,7 +140,6 @@ def video_processor(vid_capture, df, source):
 
             # if warped image is not null
             if type(warped) != type(None):
-                # print(f'upperleft corner: {corners[0]}')
                 cv2.imshow("warped original", warped)
 
                 # convert the image to txt using pytesseract
@@ -166,10 +167,12 @@ def video_processor(vid_capture, df, source):
                     # check if car is resident or visitor
                     if len(rdf[rdf.Plate == plate_no]) == 0:
                         car_type = "VISITOR"
+                        gate_control("RED")
                     else:
                         car_type = "RESIDENT"
                         # OPEN THE GATE
                         gate_control("OPEN")
+                        gate_control("GREEN")
                         gate = "open"
 
             elif state == 2:
