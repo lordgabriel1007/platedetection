@@ -309,11 +309,11 @@ pattern = re.compile("[\W_]+")
 
 if args["videofolder"] == "":
     # Capture video from webcam
-    vid_cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    vid_cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
     vid_cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
     vid_cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
     source = "webcam"
-    video_processor(vid_cap)
+    video_processor(vid_cap, df, source)
 else:
     all_files = glob.glob(os.path.join(f'{args["videofolder"]}/*.mp4'))
     for filename in all_files:
