@@ -5,7 +5,7 @@ import numpy as np
 print('test this...')
 
 # Create a VideoCapture object
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Check if camera opened successfully
 if (cap.isOpened() == False): 

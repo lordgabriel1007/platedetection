@@ -8,6 +8,25 @@ from datetime import datetime
 import os
 import glob
 import re
+import easyocr
+reader = easyocr.Reader(['en'], gpu=False)
+
+
+def read_license_plate(license_plate_crop):
+    """
+    Read the license plate text from the given cropped image.
+
+    Args:
+        license_plate_crop (PIL.Image.Image): Cropped image containing the license plate.
+    Returns:
+        tuple: Tuple containing the formatted license plate text and its confidence score.
+    """
+    detections = reader.readtext(license_plate_crop)
+    for detection in detections:
+        bbox, text, score = detection
+
+        return text, score
+    
 
 print("main program starting..")
 
@@ -145,6 +164,7 @@ def video_processor(vid_capture, df, source):
                 # convert the image to txt using pytesseract
                 config = "-l eng --oem 1 --psm 7"
                 text = pytesseract.image_to_string(warped, config=config)
+                # text, score = read_license_plate(warped) #using easyocr
                 print(f"detected text:{text}, length:{len(text)}")
                 text = pattern.sub("", text)  # keep alphanumeric characters only
 
@@ -195,16 +215,14 @@ def video_processor(vid_capture, df, source):
 
                 if frame_elapsed > 40:
                     # append this car to the dataframe
-                    df = df.append(
-                        {
-                            "DateTime": datetime.now(),
-                            "Plate": plate_no,
-                            "Direction": direction,
-                            "Type": car_type,
-                            "Source": source,
-                        },
-                        ignore_index=True,
-                    )
+                    new_row = {
+                        "DateTime": datetime.now(),
+                        "Plate": plate_no,
+                        "Direction": direction,
+                        "Type": car_type,
+                        "Source": source,
+                    }
+                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
                     # next state = 1
                     direction = ""
                     car_type = ""
@@ -242,28 +260,24 @@ def video_processor(vid_capture, df, source):
 
     # if state machine ends at state 2, append the last recorded car
     if state == 2:
-        df = df.append(
-            {
-                "DateTime": datetime.now(),
-                "Plate": plate_no,
-                "Direction": direction,
-                "Type": car_type,
-                "Source": source,
-            },
-            ignore_index=True,
-        )
+        new_row = {
+            "DateTime": datetime.now(),
+            "Plate": plate_no,
+            "Direction": direction,
+            "Type": car_type,
+            "Source": source,
+        }
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
     if found == False:
-        df = df.append(
-            {
-                "DateTime": datetime.now(),
-                "Plate": "",
-                "Direction": "",
-                "Type": "",
-                "Source": source,
-            },
-            ignore_index=True,
-        )
+        new_row = {
+            "DateTime": datetime.now(),
+            "Plate": "",
+            "Direction": "",
+            "Type": "",
+            "Source": source,
+        }
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
     if gate == "open":
         # CLOSE THE GATE
