@@ -11,9 +11,26 @@ import re
 import easyocr
 import serial
 from ultralytics import YOLO
+import ollama
+from ollama import generate
 
 reader = easyocr.Reader(['en'], gpu=False)
 model = YOLO('license_plate_detector.pt')
+
+def analyse_image(img):
+    is_success, buffer = cv2.imencode(".png", img)
+    io_buf = buffer.tobytes()
+    full_response = ''
+    # Generate a description of the image
+    for response in generate(model='llava:13b-v1.6', 
+                             prompt='what type of vehicle is in this image? answer in this format[manufacturer vehicle_type] examples: [Mitsubishi Sedan], [Toyota SUV], [Ford Pickup] ', 
+                             images=[io_buf], 
+                             stream=True):
+        # Print the response to the console and add it to the full response
+        print(response['response'], end='', flush=True)
+        full_response += response['response']
+    return full_response
+
 
 def read_license_plate(license_plate_crop):
     """
@@ -103,8 +120,11 @@ def video_processor(vid_capture, df, source):
     text = ""
     direction = ""
     car_type = ""
+    car_make = ""
     found = False
     gate = "closed"
+    start_frame = None
+    end_frame = None
     while vid_capture.isOpened():
         time_elapsed = time.time() - prev
         # Capture each frame of webcam video
@@ -130,6 +150,8 @@ def video_processor(vid_capture, df, source):
                         found = True
                         text = ""  # reset text variable
                         state = 2  # move to state 2
+                        start_frame = image
+                        cv2.imshow("start_frame", start_frame)
                         # check if car is resident or visitor
                         if len(rdf[rdf.Plate == plate_no]) == 0:
                             car_type = "VISITOR"
@@ -144,6 +166,8 @@ def video_processor(vid_capture, df, source):
                     if x:
                         frame_begin = frame_no
                         # print(f'corners: {corners}')
+                        end_frame = image
+                        cv2.imshow("end_frame", end_frame)
                         if x_min > 0:
                             delta_x = x_min - corner_x
                             if delta_x > 0:
@@ -156,18 +180,27 @@ def video_processor(vid_capture, df, source):
                             plate_no = text  # save text as plate number
                             frame_elapsed = frame_no - frame_begin
                             if frame_elapsed > 40:
+                               
+                                if direction =="EXITING": 
+                                    car_make = analyse_image(end_frame) 
+                                elif direction=="ENTERING":
+                                    car_make = analyse_image(start_frame)
+                                print(car_make)
                                 # append this car to the dataframe
+                                
                                 new_row = {
                                     "DateTime": datetime.now(),
                                     "Plate": plate_no,
                                     "Direction": direction,
                                     "Type": car_type,
+                                    "Make": car_make,
                                     "Source": source,
                                 }
                                 df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
                                 # next state = 1
                                 direction = ""
                                 car_type = ""
+                                car_make = ""
                                 plate_no = ""
                                 # CLOSE THE GATE
                                 gate_control("CLOSE")
@@ -194,11 +227,18 @@ def video_processor(vid_capture, df, source):
                     break
     # if state machine ends at state 2, append the last recorded car
     if state == 2:
+        if direction =="EXITING": 
+            car_make = analyse_image(end_frame) 
+        elif direction=="ENTERING":
+            car_make = analyse_image(start_frame)
+        print(car_make)
+
         new_row = {
             "DateTime": datetime.now(),
             "Plate": plate_no,
             "Direction": direction,
             "Type": car_type,
+            "Make": car_make,
             "Source": source,
         }
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
@@ -208,6 +248,7 @@ def video_processor(vid_capture, df, source):
             "Plate": "",
             "Direction": "",
             "Type": "",
+            "Make": "",
             "Source": source,
         }
         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
